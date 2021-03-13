@@ -1,12 +1,23 @@
-FROM centos:latest
-MAINTAINER kartik.kaari.kp@gmail.com
-RUN yum install -y httpd \
-  zip  \
-  unzip 
-ADD https://www.free-css.com/assets/files/free-css-templates/download/page264/adio.zip /var/www/html/
-WORKDIR /var/www/html
-RUN unzip adio.zip
-RUN cp -rvf adio/* .
-RUN rm -rf __MACOSX adio.zip adio
-CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+FROM ubuntu:18.04
+
+LABEL name="httpbin"
+LABEL version="0.9.2"
+LABEL description="A simple HTTP service."
+LABEL org.kennethreitz.vendor="Kenneth Reitz"
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+RUN apt update -y && apt install python3-pip git -y && pip3 install --no-cache-dir pipenv
+
+ADD Pipfile Pipfile.lock /httpbin/
+WORKDIR /httpbin
+RUN /bin/bash -c "pip3 install --no-cache-dir -r <(pipenv lock -r)"
+
+ADD . /httpbin
+RUN pip3 install --no-cache-dir /httpbin
+
 EXPOSE 80
+
+CMD ["gunicorn", "-b", "0.0.0.0:80", "httpbin:app", "-k", "gevent"]
+
